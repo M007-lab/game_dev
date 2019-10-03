@@ -1,0 +1,828 @@
+import random
+import csv
+from abc import ABC, abstractmethod
+import pygame
+
+
+class Organism(ABC):
+    _x=0
+    _y=0
+    _initiative=0
+    _power=0
+    _color=(0,0,0)
+    _world=None
+    _name=""
+    _alive=True
+    @abstractmethod
+    def action(self):
+        pass
+
+    def collision(self,organism):
+        pass
+
+    def breeding(self):
+        Space = self._world.EmptySpace(self._x, self._y)
+        if (self._x != Space[0] or self._y != Space[1]):
+
+                self._world.AddOrganism(self.child(Space[0], Space[1]))
+
+    @abstractmethod
+    def child(self,x,y):
+        pass
+
+    def fight(self,organism):
+        self._world.printComment("organism  " + self._name + "  attacked  " + organism._name)
+        if (self._power >= organism._power):
+              organism.dead()
+        else:
+              self.dead()
+
+    def dead(self):
+        self._alive=False
+        self._world.printComment("Organism "+self._name+" died")
+
+    _pushBack=False
+
+    def flee(self):
+        return False
+
+
+class Animal(Organism):
+    def __init__(self):
+        pass
+        #Organism.__init__(self)
+
+    def action(self):
+        move=random.randint(0,100)
+        if (move < 25 and self._x > 0):
+            self._x-=1
+        if (move >= 25 and move < 50 and self._x < self._world._width):
+            self._x +=1
+        if (move >= 50 and move < 75 and self._y > 0):
+            self._y -=1
+        if (move >= 75 and move < 100 and self._y < self._world._height):
+            self._y +=1
+        self.fightMaybe(move)
+
+    def fightMaybe(self,zn):
+        organism = self._world.CollisionCheck(self, self._x, self._y);
+        if (organism != None):
+
+            if (self._color == organism._color):
+                  self.breeding()
+            else:
+                self.collision(organism)
+                organism.collision(self)
+                if (organism._pushBack == True):
+                    self.GoBack(zn)
+
+                if (organism.flee() == False and self.flee() == False and self._pushBack == False):
+                     self.fight(organism)
+    def GoBack(self,zn):
+        if zn<25 :
+            self._x+=1
+        if (zn>=25 and zn <50):
+            self._x -= 1
+        if (zn>=50 and zn <75):
+            self._y+= 1
+        if zn>=75:
+            self._y -= 1
+
+
+class Wolf(Animal):
+    def __init__(self,x,y,world):
+        Animal.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(128,128,128)
+        self._power=9
+        self._initiative=5
+        self._age=0
+        self._name="Wolf"
+
+    def child(self, x, y):
+
+        return Wolf(x,y,self._world)
+
+
+
+class Human(Animal):
+    _move=0
+    speed=1
+
+    def __init__(self,x,y,world):
+        Animal.__init__(self)
+
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(255,51,100)
+        self._power=5
+        self._initiative = 4
+        self._age=0
+        self._name="Human"
+        self.skill=0
+        self.cnt=0
+
+    def moveRight(self):
+
+       if self._x < self._world._width:
+          self._x = self._x + self.speed
+
+    def moveLeft(self):
+        if (self._x>0):
+           self._x = self._x - self.speed
+
+    def moveUp(self):
+        if (self._y > 0):
+          self._y = self._y - self.speed
+
+    def moveDown(self):
+        if (self._y < self._world._height):
+           self._y = self._y + self.speed
+    def setDirection(self,zn):
+
+       if (zn==40):
+           self.moveRight()
+       elif (zn==10):
+           self.moveLeft()
+       elif (zn==60):
+           self.moveUp()
+       elif(zn==90) :
+           self.moveDown()
+
+    def action(self):
+
+        """event = pygame.event.poll()
+        if event.type == pygame.KEYDOWN:
+
+            key = event.key
+            if (key == pygame.K_RIGHT):
+                self.setDirection(40)
+                zn = 40
+
+            if (key == pygame.K_LEFT):
+                self.setDirection(10)
+                zn = 10
+
+            if (key == pygame.K_UP):
+                self.setDirection(60)
+                zn = 60
+
+            if (key == pygame.K_DOWN):
+                self.setDirection(90)
+                zn = 90
+            if (key == pygame.K_0):
+                print("pressed")
+                self.skill=1"""
+
+        self.fightMaybe(self._move)
+        print(self._world.skill)
+        if self._world.skill==1 :
+            print("skill")
+            x = self._x
+            y = self._y
+            for o in self._world.getOrganisms():
+                if o._alive == True:
+
+                    if ((abs(o._x - x) == 1 and abs(o._y - y) == 1) or (abs(o._x - x) == 1 and o._y - y == 0) or (
+                            abs(o._y - y) == 1 and o._x - x == 0)):
+                        o.dead()
+
+    def child(self,x,y):
+        return None
+
+
+class Antylope(Animal):
+    def __init__(self,x,y,world):
+        Animal.__init__(self)
+        self._x = x
+        self._y = y
+        self._world=world
+        self._color=(204,102,0)
+        self._power=4
+        self._initiative = 4
+        self._age=0
+        self._name = "Antylope"
+
+    def child(self,x,y):
+        return Antylope(x,y,self._world)
+
+    def action(self):
+        move = random.randint(0, 100)
+        if (move < 25 and self._x > 2):
+            self._x -= 2
+        if (move >= 25 and move < 50 and self._x < self._world._width-1):
+            self._x += 2
+        if (move >= 50 and move < 75 and self._y > 2):
+            self._y -= 2
+        if (move >= 75 and move < 100 and self._y < self._world._height-1):
+            self._y += 2
+        self.fightMaybe(move)
+
+    def flee(self):
+        p = random.randint(0, 100)
+        if p < 50:
+            return True
+        else:
+            return False
+
+    def collision(self,organism):
+        space = self._world.EmptySpace(self._x, self._y)
+        if (self.flee() == True):
+
+            if (space[0] != self._x and space[1] != self._y):
+                   x=space[0]
+                   y=space[1]
+
+        else:
+            organism.fight(self)
+
+
+class Turtle(Animal):
+    def __init__(self,x,y,world):
+        Animal.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(0,153,0)
+        self._power=2
+        self._initiative = 1
+        self._age=0
+        self._name="Turtle"
+
+    def child(self,x,y):
+        return Turtle(x,y,self._world)
+
+
+class Sheep(Animal):
+    def __init__(self,x,y,world):
+        Animal.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(255,255,204)
+        self._power=4
+        self._initiative = 4
+        self._age=0
+        self._name="Sheep"
+
+    def child(self,x,y):
+        return Sheep(x,y,self._world)
+
+
+class Fox(Animal):
+    def __init__(self,x,y,world):
+        Animal.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(255,128,0)
+        self._power=3
+        self._initiative = 7
+        self._age=0
+        self._name="Fox"
+
+    def child(self,x,y):
+        return Fox(x,y,self._world)
+
+    def collision(self,organism):
+        if organism._power>self._power:
+            organism._pushBack=True
+
+
+class Cyber(Animal):
+    def __init__(self,x,y,world):
+        Animal.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(50,50,10)
+        self._power=11
+        self._initiative = 4
+        self._age=0
+        self._name="Cyber"
+
+
+    def hogIn(self):
+        hogweeds=[]
+        for org in self._world.getOrganisms():
+            if isinstance(org,Hogweed):
+                 hogweeds.append(list([org._x,org._y]))
+        return hogweeds
+
+    def child(self,x,y):
+        return Cyber(x,y,self._world)
+
+    def action(self):
+        dist=50
+        if self.hogIn()!=[]:
+            for l in self.hogIn():
+                if max(abs(l[0]-self._x),abs(l[1]-self._y))<dist:
+                    #dist=max(abs(l[0]-self._x),abs(l[1]-self._y))
+                    self._x = l[0]
+                    self._y = l[1]
+
+            self.fightMaybe(0)
+        else:
+            super().action()
+
+
+
+
+
+
+class Plant(Organism):
+    def __init__(self):
+        pass
+
+    def action(self):
+        p=random.randint(0,100)
+        if p<5:
+            self.breeding()
+
+
+
+
+
+class Grass(Plant):
+
+    def __init__(self,x,y,world):
+        Plant.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(153,255,51)
+        self._power=0
+        self._age=0
+        self._name="Grass"
+
+    def child(self,x,y):
+        return Grass(x,y,self._world)
+
+
+class Guarana(Plant):
+    def __init__(self,x,y,world):
+        Plant.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(10,255,100)
+        self._power=0
+        self._age=0
+        self._name="Guarana"
+
+    def child(self,x,y):
+        return Guarana(x,y,self._world)
+
+    def collision(self,organism):
+        organism._power+=3
+        self._world.printComment("organism " + organism._name + " 's power was increased by 3")
+
+
+class Belladonna(Plant):
+    def __init__(self,x,y,world):
+        Plant.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(127,0,255)
+        self._power=99
+        self._age=0
+        self._name="Belladonna"
+
+    def child(self,x,y):
+        return Belladonna(x,y,self._world)
+
+    def collision(self,organism):
+        organism.fight(self)
+        organism.dead()
+
+
+class Hogweed(Plant):
+    def __init__(self,x,y,world):
+        Plant.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(255,0,0)
+        self._power=10
+        self._age=0
+        self._name="Hogweed"
+
+    def child(self,x,y):
+        return Hogweed(x,y,self._world)
+
+    def collision(self,organism):
+        if not isinstance(organism,Cyber):
+            organism.fight(self)
+            organism.dead()
+    def action(self):
+        x=self._x
+        y=self._y
+        for  o in self._world.getOrganisms():
+           if o._alive==True:
+
+             if isinstance(o, Animal):
+
+                 if not isinstance(o, Cyber):
+                     if ((abs(o._x-x) == 1 and abs(o._y-y) == 1) or (abs(o._x-x) == 1 and o._y-y == 0) or (abs(o._y-y) == 1 and o._x-x == 0) ):
+                          o.dead()
+
+
+class Thistle(Plant):
+
+    def __init__(self,x,y,world):
+        Plant.__init__(self)
+        self._x=x
+        self._y=y
+        self._world=world
+        self._color=(0,0,255)
+        self._power=0
+        self._age=0
+        self._name="Thistle"
+
+    def child(self,x,y):
+        return Thistle(x,y,self._world)
+
+    def action(self):
+        for i in range(3):
+            super().action()
+
+
+class World():
+    __neworganisms=[]
+    __organisms=[]
+    _width=500/25-1
+    _height=500/25-1
+    skill=0
+    cnt=0
+    def __init__(self):
+        self.__organisms = []
+        self. __neworganisms = []
+        h=Human(5, 6, self)
+        self.__organisms.append(h)
+        self.skill=0
+        self.__organisms.append(Belladonna(7, 9, self))
+
+        self.__organisms.append(Wolf(1, 1, self))
+        self.__organisms.append(Turtle(1, 8, self))
+        self.__organisms.append(Guarana(0, 3, self))
+        self.__organisms.append(Sheep(10, 13, self))
+        self.__organisms.append(Fox(12, 12, self))
+        self.__organisms.append(Antylope(15, 13, self))
+        self.__organisms.append(Thistle(10, 4, self))
+        self.__organisms.append(Grass(19, 2, self))
+        self.__organisms.append(Hogweed(19, 19, self))
+
+    def getOrganisms(self):
+        return self.__organisms
+
+    def doMove(self,zn):
+        if (self.cnt % 5 == 0 and self.cnt!=0 ):
+            self.skill = 1 - self.skill
+        else:
+            self.cnt += 1
+        self.Sort()
+
+        for organism in self.__organisms:
+
+            if organism._alive == True:
+
+                if (isinstance(organism,Human)):
+
+                   organism.setDirection(zn)
+                   organism.action()
+
+
+                else :
+                  organism.action()
+
+        self.RemoveDead()
+        self.AddNew()
+    def Sort(self):
+        self.__organisms.sort(key=lambda r:r._initiative)
+    def AddNew(self):
+
+        self.__organisms.extend(self.__neworganisms)
+        self.__neworganisms.clear()
+
+    def RemoveDead(self):
+        for organism in self.__organisms:
+            if (organism._alive==False):
+                self.__organisms.remove(organism)
+    def CollisionCheck(self,myOrganism, x, y):
+
+        for organism in self.__organisms:
+
+            if(myOrganism != organism and organism._x == x and organism._y == y):
+                return organism
+
+
+        return None
+    def printComment(self,comment):
+        print(comment)
+    def EmptySpace(self, x,  y):
+
+        Space = [x,y]
+
+        if (x - 1 > 0 and self.CollisionCheck(None, x - 1, y) == None):
+
+                Space[0] = x - 1
+
+        elif (x + 1 <self. _width + 1 and self.CollisionCheck(None, x + 1, y) == None):
+
+                Space[0] = x + 1
+
+        elif (y - 1 < 0 and self.CollisionCheck(None, x, y - 1) == None):
+
+                        Space[1] = y - 1
+
+        elif  y + 1 < self._height + 1 and self.CollisionCheck(None, x, y + 1) == None:
+
+                            Space[1] = y + 1
+
+        return Space
+
+    def SetHumanMove(self, zn):
+
+        for organism in self.__organisms:
+
+            if (isinstance(organism ,Human)):
+
+
+                    h = Human(organism)
+                    h.setDirection(zn)
+                    break
+
+    def AddOrganism(self,organism):
+        if organism!=None:
+           self.__neworganisms.append(organism)
+
+    def getOrganisms(self):
+        return self.__organisms
+
+    def isFree(self,x,y):
+        for org in self.__organisms:
+            if (org._x==x and org._y==y):
+                return False
+        return True
+
+    def save(self):
+        print("save")
+        with open('C:/Users/Mouad/Desktop/saveGame.csv', mode='w') as save:
+            save=csv.writer(save, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL,lineterminator = '\n')
+            for o in self.getOrganisms():
+
+                  if isinstance(o,Human) :
+                      save.writerow([o._name, o._power, o._initiative, o._age, o._x, o._y,self.skill])
+                  else:
+                    save.writerow([o._name,o._power,o._initiative,o._age,o._x,o._y])
+
+    def load(self):
+
+        print("load")
+        with open('C:/Users/Mouad/Desktop/saveGame.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=';')
+            line_count = 0
+            for row in csv_reader:
+                line_count+=1
+
+                name=row[0]
+                print(name)
+                power=row[1]
+                init=row[2]
+                age=row[3]
+                x=int(row[4])
+                y=int(row[5])
+                if name=="Wolf":
+                    self.AddOrganism(Wolf(x,y,self))
+                    org=Wolf(x,y,self)
+                elif name=="Fox":
+                    self.AddOrganism(Fox(x,y,self))
+                    org=Fox(x,y,self)
+                elif name=="Sheep":
+                    self.AddOrganism(Sheep(x,y,self))
+                    org=Sheep(x,y,self)
+                elif name=="Antylope":
+                    self.AddOrganism(Antylope(x,y,self))
+                    org=Antylope(x,y,self)
+                elif name=="Human":
+                    self.AddOrganism(Human(x,y,self))
+                    org=Human(x, y, self)
+                elif name=="Turtle":
+                    self.AddOrganism(Turtle(x,y,self))
+                    org=Turtle(x,y,self)
+                elif name=="Grass":
+                    self.AddOrganism(Grass(x,y,self))
+                    org=Grass(x,y,self)
+                elif name=="Guarana":
+                    self.AddOrganism(Guarana(x,y,self))
+                    org=Guarana(x,y,self)
+                elif name=="Hogweed":
+                    self.AddOrganism(Hogweed(x,y,self))
+                    org=Hogweed(x, y, self)
+                elif name=="Thistle":
+                    self.AddOrganism(Thistle(x,y,self))
+                    org=Thistle(x,y,self)
+                elif name=="Belladonna":
+                    self.AddOrganism(Belladonna(x,y,self))
+                    org=Belladonna(x,y,self)
+                elif name=="Cyber":
+                    self.AddOrganism(Cyber(x,y,self))
+                    org=Cyber(x,y,self)
+                org._power=power
+                org._initiative=init
+                org._age=age
+
+
+        self.clear()
+        self.AddNew()
+
+
+
+
+
+
+        pass
+
+    def clear(self):
+
+        self.__organisms.clear()
+
+        pygame.display.flip()
+        #self.__organisms.extend( self.__neworganisms)
+
+
+class App:
+    windowWidth = 550
+    windowHeight = 550
+    player = 0
+    world=0
+    clock = pygame.time.Clock()
+    def __init__(self):
+        self._running = True
+        self._display_surf = None
+        self._image_surf = None
+        self.world=World()
+        self.clock=pygame.time.Clock()
+        #self.player = self.world.getOrganisms()[0]
+
+
+    def on_init(self):
+        pygame.init()
+
+        self._display_surf = pygame.display.set_mode((self.windowWidth, self.windowHeight), pygame.HWSURFACE)
+
+        pygame.display.set_caption('Mouad Jallouli  #179503')
+        self._running = True
+
+
+
+    def on_event(self, event):
+        if event.type == pygame.QUIT:
+            self._running = False
+
+    def on_loop(self):
+        pass
+
+    def on_render(self):
+        self._display_surf.fill((0, 0, 0))
+        self._display_surf.fill((0,255,0),(6*25,20*25,100,50))
+        self._display_surf.fill((255, 255, 255), (12 * 25, 20 * 25, 100, 50))
+        font = pygame.font.SysFont('comicsans', 60)
+        text = font.render("save", 1, (0, 0, 0))
+        text2 = font.render("load", 1, (0, 0, 0))
+        self._display_surf.blit(text,(6*25,20*25,100,50))
+        self._display_surf.blit(text2,(12 * 25, 20 * 25, 100, 50))
+
+        for org in self.world.getOrganisms():
+
+            #try:
+            self._display_surf.fill(org._color, (org._x*25, org._y*25,25,25))
+            #except:
+                #self._display_surf.fill((0,0,0), (0 * 25, 0 * 25, 25, 25))
+
+
+            #pygame.draw.rect(self._display_surf,org._color,(org._x,org._y,28,28))
+        pygame.display.flip()
+        self.clock.tick(60)
+
+    def on_cleanup(self):
+        pygame.quit()
+
+    def on_execute(self):
+        if self.on_init() == False:
+            self._running = False
+        #keys = pygame.key.get_pressed()
+        while (self._running ):
+            #print("again")
+            pygame.event.pump()
+
+            zn = 0
+            event=pygame.event.poll()
+            if event.type==pygame.KEYDOWN:
+
+                key=event.key
+                print(key)
+                if (key == pygame.K_RIGHT):
+                    zn = 40
+                    self.world.doMove(zn)
+
+
+                if (key == pygame.K_LEFT):
+                    zn = 10
+                    self.world.doMove(zn)
+
+
+                if (key == pygame.K_UP):
+                    zn = 60
+                    self.world.doMove(zn)
+
+
+                if (key == pygame.K_DOWN):
+                    zn = 90
+                    self.world.doMove(zn)
+
+                if (key==pygame.K_SPACE):
+
+                    self.world.doMove(zn)
+
+                if (key == pygame.K_0):
+
+                    self.world.skill = 1
+
+                if (key==pygame.K_ESCAPE):
+                    self._running = False
+            if(event.type==pygame.MOUSEBUTTONDOWN):
+                pos=pygame.mouse.get_pos()
+                x=int(pos[0]/25)
+                y=int(pos[1]/25)
+                print("pos===", x, " /", y)
+                if(  x>=150/25 and x <= 250/25 and y>=500/25):
+
+                    self.world.save()
+                elif(  x>=300/25 and x <=400/25 and y>=500/25):
+                    self.world.load()
+                elif self.world.isFree(x,y) and x<self.world._width and y <self.world._height:
+                    name=input("Which organism do we add ?")
+                    if name == "Wolf":
+                        self.world.AddOrganism(Wolf(x, y, self.world))
+                    elif name == "Fox":
+                        self.world.AddOrganism(Fox(x, y, self.world))
+                    elif name == "Sheep":
+                        self.world.AddOrganism(Sheep(x, y, self.world))
+                    elif name == "Antylope":
+                        self.world.AddOrganism(Antylope(x, y, self.world))
+                    elif name == "Human":
+                        self.world.AddOrganism(Human(x, y, self.world))
+                    elif name == "Turtle":
+                        self.world.AddOrganism(Turtle(x, y, self.world))
+                    elif name == "Grass":
+                        self.world.AddOrganism(Grass(x, y, self.world))
+                    elif name == "Guarana":
+                        self.world.AddOrganism(Guarana(x, y, self.world))
+                    elif name == "Hogweed":
+                        self.world.AddOrganism(Hogweed(x, y, self.world))
+                    elif name == "Thistle":
+                        self.world.AddOrganism(Thistle(x, y, self.world))
+                    elif name == "Belladonna":
+                        self.world.AddOrganism(Belladonna(x, y, self.world))
+                    elif name == "Cyber":
+                        self.world.AddOrganism(Cyber(x, y, self.world))
+                    #self.world.doMove(0)
+
+
+
+
+
+
+
+
+
+
+            self.on_render()
+
+        self.on_cleanup()
+
+
+    def intro(self):
+        self.on_init()
+        #pygame.event.pump()
+        while(self._running):
+            event = pygame.event.poll()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self._running = False
+            self._display_surf.fill((255, 255, 255))
+            #pygame.draw.polygon(self._display_surf, (0,0,0), [[100, 100], [100, 400], [400, 300]], 2)
+            self._display_surf.blit(self._image_surf_rect, (250, 240))
+            self._display_surf.blit(self._image_surf_polygon, (250, 260))
+            pygame.display.flip()
+
+
+if __name__ == "__main__":
+    theApp = App()
+    #theApp.intro()
+    theApp.on_execute()
+
