@@ -1,4 +1,6 @@
 # game_dev
+__PYTHON VERSION__
+
 
 The main goal of the project is the implementation of a 2D virtual world simulator. The virtual
 world should have the structure of a two-dimensional NxM grid. In this world, simple life
